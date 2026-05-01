@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Quotation</title>
+<style>
+  @page {
+    size: A4 landscape;
+    margin: 15mm;
+    @bottom-center {
+      content: "Page " counter(page) " of " counter(pages);
+      font-size: 9px;
+      color: #666;
+    }
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', 'Helvetica', sans-serif;
+    font-size: 11px;
+    color: #1a1a1a;
+    line-height: 1.4;
+  }
+
+  .page-break { page-break-before: always; }
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #F5A623;
+    padding-bottom: 8px;
+    margin-bottom: 15px;
+  }
+
+  .header-left h1 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #0F0F0F;
+    margin-bottom: 2px;
+  }
+
+  .header-left .sub {
+    font-size: 10px;
+    color: #555;
+  }
+
+  .header-right {
+    text-align: right;
+    font-size: 10px;
+    color: #555;
+  }
+
+  .title-block {
+    text-align: center;
+    margin-bottom: 15px;
+  }
+
+  .title-block h2 {
+    font-size: 16px;
+    font-weight: 700;
+    color: #F5A623;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  .title-block .meta {
+    font-size: 10px;
+    color: #777;
+    margin-top: 3px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 15px;
+  }
+
+  th {
+    background: #1A1A1A;
+    color: #fff;
+    padding: 6px 8px;
+    text-align: left;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  td {
+    padding: 5px 8px;
+    border-bottom: 1px solid #eee;
+    font-size: 10px;
+  }
+
+  tr:nth-child(even) td {
+    background: #f9fafb;
+  }
+
+  .text-right { text-align: right; }
+  .text-center { text-align: center; }
+  .font-mono { font-family: 'Consolas', 'Courier New', monospace; }
+
+  .best-price {
+    background: #d1fae5 !important;
+    font-weight: 700;
+  }
+
+  .total-row td {
+    border-top: 2px solid #1A1A1A;
+    font-weight: 700;
+    font-size: 11px;
+    background: #f3f4f6 !important;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 8px;
+    font-size: 8px;
+    font-weight: 600;
+    color: #fff;
+  }
+  .badge-pipe { background: #1D4ED8; }
+  .badge-fitting { background: #C2410C; }
+  .badge-solvent { background: #15803D; }
+  .badge-pvc { background: #0E7490; }
+  .badge-cpvc { background: #7C3AED; }
+
+  .company-header-apollo { background: #DC2626 !important; }
+  .company-header-supreme { background: #2563EB !important; }
+  .company-header-astral { background: #16A34A !important; }
+  .company-header-ashirvad { background: #D97706 !important; }
+
+  .footer {
+    margin-top: 20px;
+    padding-top: 8px;
+    border-top: 1px solid #ddd;
+    font-size: 9px;
+    color: #888;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════ PAGE 1: COMPARISON SUMMARY ═══════ -->
+<div class="header">
+  <div class="header-left">
+    <h1>{{ dealer.dealer_name or 'QuoteForge' }}</h1>
+    <div class="sub">
+      {% if dealer.gst_number %}GST: {{ dealer.gst_number }} | {% endif %}
+      {% if dealer.mobile_number %}Mob: {{ dealer.mobile_number }}{% endif %}
+    </div>
+  </div>
+  <div class="header-right">
+    QUOTATION<br>
+    Quote ID: {{ quote.quote_id[:8] }}<br>
+    Date: {{ quote.created_at[:10] if quote.created_at is string else quote.created_at.strftime('%Y-%m-%d') }}
+  </div>
+</div>
+
+<div class="title-block">
+  <h2>Multi-Brand Price Comparison</h2>
+  <div class="meta">Client: {{ quote.client_name or 'N/A' }}</div>
+</div>
+
+<!-- Comparison Summary Table -->
+<table>
+  <thead>
+    <tr>
+      <th>Company</th>
+      <th class="text-right">Total Amount</th>
+      <th class="text-center">Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for ct in quote.company_totals %}
+    <tr{% if ct.is_best_price %} class="best-price"{% endif %}>
+      <td><strong>{{ ct.company }}</strong></td>
+      <td class="text-right font-mono">{{ format_currency(ct.total) }}</td>
+      <td class="text-center">
+        {% if ct.is_best_price %}🏆 Best Price{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<!-- Detailed Comparison -->
+<table>
+  <thead>
+    <tr>
+      <th>Sr.</th>
+      <th>Item Code</th>
+      <th>Description</th>
+      <th class="text-center">Cat.</th>
+      <th class="text-center">Type</th>
+      <th class="text-center">Qty</th>
+      <th class="text-right">Apollo</th>
+      <th class="text-right">Supreme</th>
+      <th class="text-right">Astral</th>
+      <th class="text-right">Ashirvad</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in quote.line_items %}
+    {% if not item.error %}
+    <tr>
+      <td>{{ item.sr }}</td>
+      <td class="font-mono">{{ item.product_code }}</td>
+      <td>{{ item.description[:35] }}{% if item.description|length > 35 %}...{% endif %}</td>
+      <td class="text-center">
+        <span class="badge badge-{{ item.category|lower }}">{{ item.category }}</span>
+      </td>
+      <td class="text-center">
+        <span class="badge badge-{{ item.material_type|lower }}">{{ item.material_type }}</span>
+      </td>
+      <td class="text-center font-mono">{{ item.quantity }}</td>
+      <td class="text-right font-mono">{{ format_currency(item.line_total_apollo) }}</td>
+      <td class="text-right font-mono">{{ format_currency(item.line_total_supreme) }}</td>
+      <td class="text-right font-mono">{{ format_currency(item.line_total_astral) }}</td>
+      <td class="text-right font-mono">{{ format_currency(item.line_total_ashirvad) }}</td>
+    </tr>
+    {% endif %}
+    {% endfor %}
+    <tr class="total-row">
+      <td colspan="6"><strong>GRAND TOTAL</strong></td>
+      {% for ct in quote.company_totals %}
+      <td class="text-right font-mono{% if ct.is_best_price %} best-price{% endif %}">
+        {{ format_currency(ct.total) }}
+      </td>
+      {% endfor %}
+    </tr>
+  </tbody>
+</table>
+
+<!-- ═══════ PAGES 2-5: PER-COMPANY DETAIL ═══════ -->
+{% for company in companies %}
+<div class="page-break"></div>
+
+<div class="header">
+  <div class="header-left">
+    <h1>{{ dealer.dealer_name or 'QuoteForge' }}</h1>
+    <div class="sub">
+      {% if dealer.gst_number %}GST: {{ dealer.gst_number }} | {% endif %}
+      {% if dealer.mobile_number %}Mob: {{ dealer.mobile_number }}{% endif %}
+    </div>
+  </div>
+  <div class="header-right">
+    {{ company }} — Detailed Quote<br>
+    Client: {{ quote.client_name or 'N/A' }}
+  </div>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th class="company-header-{{ company|lower }}">Sr.</th>
+      <th class="company-header-{{ company|lower }}">Item Code</th>
+      <th class="company-header-{{ company|lower }}">Description</th>
+      <th class="company-header-{{ company|lower }} text-center">Cat.</th>
+      <th class="company-header-{{ company|lower }} text-center">Material</th>
+      <th class="company-header-{{ company|lower }} text-right">MRP</th>
+      <th class="company-header-{{ company|lower }} text-center">Qty</th>
+      <th class="company-header-{{ company|lower }} text-center">Discount%</th>
+      <th class="company-header-{{ company|lower }} text-right">Unit Price</th>
+      <th class="company-header-{{ company|lower }} text-right">Line Total</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in company_details[company] %}
+    <tr>
+      <td>{{ item.sr }}</td>
+      <td class="font-mono">{{ item.product_code }}</td>
+      <td>{{ item.description[:40] }}{% if item.description|length > 40 %}...{% endif %}</td>
+      <td class="text-center">{{ item.category }}</td>
+      <td class="text-center">{{ item.material_type }}</td>
+      <td class="text-right font-mono">{{ format_currency(item.mrp) }}</td>
+      <td class="text-center font-mono">{{ item.quantity }}</td>
+      <td class="text-center">{{ item.discount }}%</td>
+      <td class="text-right font-mono">{{ format_currency(item.unit_price) }}</td>
+      <td class="text-right font-mono">{{ format_currency(item.line_total) }}</td>
+    </tr>
+    {% endfor %}
+    <tr class="total-row">
+      <td colspan="9"><strong>GRAND TOTAL — {{ company }}</strong></td>
+      <td class="text-right font-mono">
+        {% for ct in quote.company_totals %}
+          {% if ct.company == company %}{{ format_currency(ct.total) }}{% endif %}
+        {% endfor %}
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="footer">
+  Prices valid as of {{ quote.created_at[:10] if quote.created_at is string else quote.created_at.strftime('%Y-%m-%d') }} |
+  {{ dealer.dealer_name or '' }} |
+  {% if dealer.gst_number %}GST: {{ dealer.gst_number }} | {% endif %}
+  {% if dealer.mobile_number %}Mob: {{ dealer.mobile_number }}{% endif %}
+</div>
+{% endfor %}
+
+</body>
+</html>
