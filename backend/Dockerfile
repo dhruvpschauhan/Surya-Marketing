@@ -8,6 +8,8 @@ RUN apt-get update && apt-get install -y \
     libgdk-pixbuf-2.0-0 \
     libffi-dev \
     shared-mime-info \
+    fontconfig \
+    fonts-liberation \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
@@ -20,8 +22,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy backend code
 COPY . .
 
-# Expose port (Koyeb and others use port 8000 by default, or read from ENV)
-EXPOSE 8000
+# Expose port (Hugging Face requires port 7860)
+EXPOSE 7860
 
 # Start FastAPI
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860"]
