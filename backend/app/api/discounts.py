@@ -52,8 +52,8 @@ async def update_discounts(
     today = date.today()
 
     for disc in request.updates:
-        # Deactivate existing active record for this combination
-        await db.execute(
+        # Try to update the existing active record
+        result = await db.execute(
             update(Discount)
             .where(
                 Discount.company == disc.company,
@@ -61,19 +61,21 @@ async def update_discounts(
                 Discount.material_type == disc.material_type,
                 Discount.is_active == True,
             )
-            .values(is_active=False)
+            .values(discount_percent=disc.discount_percent)
         )
-
-        # Insert new active record
-        new_discount = Discount(
-            company=disc.company,
-            category=disc.category,
-            material_type=disc.material_type,
-            discount_percent=disc.discount_percent,
-            effective_from=today,
-            is_active=True,
-        )
-        db.add(new_discount)
+        
+        # If no active record exists for this combo, insert it
+        if result.rowcount == 0:
+            new_discount = Discount(
+                company=disc.company,
+                category=disc.category,
+                material_type=disc.material_type,
+                discount_percent=disc.discount_percent,
+                effective_from=today,
+                is_active=True,
+            )
+            db.add(new_discount)
+            
         updated += 1
 
     await db.flush()

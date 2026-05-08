@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ProductRow from './ProductRow';
 import QuoteResults from './QuoteResults';
-import { generateQuote } from '../../api/client';
+import { generateQuote, getDiscounts } from '../../api/client';
+
+const COMPANIES = ['Apollo', 'Supreme', 'Astral', 'Ashirvad'];
 
 const emptyItem = () => ({
   product_code: '',
@@ -15,6 +17,7 @@ const emptyItem = () => ({
   quantity: '',
   isValid: false,
   error: null,
+  discount_overrides: { Apollo: null, Supreme: null, Astral: null, Ashirvad: null },
 });
 
 export default function QuoteBuilder() {
@@ -22,6 +25,26 @@ export default function QuoteBuilder() {
   const [items, setItems] = useState([emptyItem()]);
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState(null);
+  const [masterDiscounts, setMasterDiscounts] = useState({});
+
+  // Fetch master discount rates once on mount
+  useEffect(() => {
+    getDiscounts()
+      .then(res => {
+        const lookup = {};
+        for (const cell of (res.data?.cells || [])) {
+          const key = `${cell.company}|${cell.category}|${cell.material_type}`;
+          lookup[key] = parseFloat(cell.discount_percent);
+        }
+        setMasterDiscounts(lookup);
+      })
+      .catch(() => {});
+  }, []);
+
+  const getMasterDiscount = (company, category, materialType) => {
+    const key = `${company}|${category}|${materialType}`;
+    return masterDiscounts[key] ?? null;
+  };
 
   const handleUpdateItem = (index, updatedItem) => {
     const newItems = [...items];
@@ -50,10 +73,22 @@ export default function QuoteBuilder() {
     try {
       const validItems = items
         .filter(i => i.product_code && i.quantity && parseFloat(i.quantity) > 0)
-        .map(i => ({
-          product_code: i.product_code,
-          quantity: parseFloat(i.quantity),
-        }));
+        .map(i => {
+          // Build discount_overrides: only include non-null values
+          const overrides = {};
+          let hasAny = false;
+          for (const c of COMPANIES) {
+            const v = i.discount_overrides?.[c];
+            overrides[c] = v !== null && v !== undefined && v !== '' ? parseFloat(v) : null;
+            if (overrides[c] !== null) hasAny = true;
+          }
+
+          return {
+            product_code: i.product_code,
+            quantity: parseFloat(i.quantity),
+            discount_overrides: hasAny ? overrides : null,
+          };
+        });
 
       const res = await generateQuote({
         client_name: clientName,
@@ -113,7 +148,8 @@ export default function QuoteBuilder() {
                 <div className="table-cell p-3 text-right text-[10px] uppercase font-semibold text-[var(--color-text-muted)] tracking-wider border-b border-[var(--color-border)] company-tint-supreme" title="Supreme MRP">Supreme</div>
                 <div className="table-cell p-3 text-right text-[10px] uppercase font-semibold text-[var(--color-text-muted)] tracking-wider border-b border-[var(--color-border)] company-tint-astral" title="Astral MRP">Astral</div>
                 <div className="table-cell p-3 text-right text-[10px] uppercase font-semibold text-[var(--color-text-muted)] tracking-wider border-b border-[var(--color-border)] company-tint-ashirvad" title="Ashirvad MRP">Ashirvad</div>
-                <div className="table-cell p-3 text-center text-[10px] uppercase font-semibold text-[var(--color-text-muted)] tracking-wider border-b border-[var(--color-border)] sticky right-[40px] bg-[#141414] w-[90px] z-30">Qty</div>
+                <div className="table-cell p-3 text-center text-[10px] uppercase font-semibold text-[var(--color-text-muted)] tracking-wider border-b border-[var(--color-border)] sticky right-[80px] bg-[#141414] w-[90px] z-30">Qty</div>
+                <div className="table-cell p-3 border-b border-[var(--color-border)] sticky right-[40px] bg-[#141414] w-[40px] z-30"></div>
                 <div className="table-cell p-3 border-b border-[var(--color-border)] sticky right-0 bg-[#141414] w-[40px] z-30"></div>
               </div>
             </div>
@@ -127,6 +163,7 @@ export default function QuoteBuilder() {
                   index={index}
                   onUpdate={handleUpdateItem}
                   onRemove={handleRemoveItem}
+                  getMasterDiscount={getMasterDiscount}
                 />
               ))}
             </div>

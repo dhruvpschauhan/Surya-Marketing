@@ -18,9 +18,7 @@ export default function Header() {
       <header className="h-14 bg-[var(--color-base)] md:bg-[var(--color-card)] border-b border-[var(--color-border)] flex items-center justify-between px-4 md:px-6 sticky top-0 z-30">
         {/* Left: Logo + Title */}
         <div className="flex items-center gap-3">
-          <div className="md:hidden w-8 h-8 rounded-lg bg-[var(--color-accent)] flex items-center justify-center shrink-0">
-            <span className="text-black font-bold text-sm">QF</span>
-          </div>
+          <img src="/logo_qf.ico" alt="QuoteForge Logo" className="md:hidden w-8 h-8 rounded-lg object-contain shrink-0" />
           <div>
             <h2 className="text-[15px] font-semibold text-[var(--color-text-primary)]">
               {profile?.dealer_name || 'QuoteForge'}
@@ -73,9 +71,7 @@ export default function Header() {
             {/* Drawer Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--color-border)]">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-[var(--color-accent)] flex items-center justify-center">
-                  <span className="text-black font-bold text-xs">QF</span>
-                </div>
+                <img src="/logo_qf.ico" alt="QuoteForge Logo" className="w-7 h-7 rounded-lg object-contain" />
                 <span className="text-[14px] font-semibold text-[var(--color-text-primary)]">QuoteForge</span>
               </div>
               <button

@@ -4,6 +4,7 @@ import { getDealerProfile, updateDealerProfile, uploadLogo } from '../../api/cli
 export default function DealerProfileForm() {
   const [profile, setProfile] = useState({
     dealer_name: '', gst_number: '', mobile_number: '', address: '', logo_url: '',
+    cgst_rate: 9.0, sgst_rate: 9.0,
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -85,6 +86,40 @@ export default function DealerProfileForm() {
               className="text-xs text-[var(--color-text-muted)]"
             />
           </div>
+        </div>
+
+        {/* GST Rate Fields */}
+        <div className="pt-4 border-t border-[var(--color-border)]">
+          <p className="text-xs text-[var(--color-text-muted)] font-semibold mb-3 uppercase tracking-wider">GST Configuration</p>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs text-[var(--color-text-muted)] font-medium mb-1 block">CGST Rate (%)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                max="100"
+                value={profile.cgst_rate ?? 9}
+                onChange={(e) => setProfile({ ...profile, cgst_rate: parseFloat(e.target.value) || 0 })}
+                className="input-field"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-[var(--color-text-muted)] font-medium mb-1 block">SGST Rate (%)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                max="100"
+                value={profile.sgst_rate ?? 9}
+                onChange={(e) => setProfile({ ...profile, sgst_rate: parseFloat(e.target.value) || 0 })}
+                className="input-field"
+              />
+            </div>
+          </div>
+          <p className="text-[10px] text-[var(--color-text-muted)] mt-2">
+            Total GST = CGST + SGST = {((profile.cgst_rate ?? 0) + (profile.sgst_rate ?? 0)).toFixed(2)}%
+          </p>
         </div>
 
         <div className="pt-3">

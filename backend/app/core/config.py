@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
     DATABASE_URL: str = "sqlite+aiosqlite:///./quoteforge.db"
-    ADMIN_PASSWORD: str = "quoteforge2024"
+    ADMIN_PASSWORD: str = "2580"
     CORS_ORIGINS: str = "http://localhost:5173"
     UPLOAD_DIR: str = "uploads"
 

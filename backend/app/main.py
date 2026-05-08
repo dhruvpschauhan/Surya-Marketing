@@ -11,6 +11,7 @@ import os
 from app.core.config import get_settings
 from app.core.database import init_db
 from app.api import quote, products, discounts, dealer_profile, dealerships
+from app.routers.pdf_router import router as pdf_router
 
 
 @asynccontextmanager
@@ -55,6 +56,7 @@ app.include_router(products.router)
 app.include_router(discounts.router)
 app.include_router(dealer_profile.router)
 app.include_router(dealerships.router)
+app.include_router(pdf_router, prefix="/api/pdf")
 
 
 @app.get("/api/health")

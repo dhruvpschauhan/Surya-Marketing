@@ -25,6 +25,9 @@ HEADER_FONT = Font(name="Calibri", bold=True, color="FFFFFF", size=11)
 ALT_ROW_FILL = PatternFill(start_color="F8F9FA", end_color="F8F9FA", fill_type="solid")
 BEST_PRICE_FILL = PatternFill(start_color="D1FAE5", end_color="D1FAE5", fill_type="solid")
 TOTAL_FONT = Font(name="Calibri", bold=True, size=12)
+GST_FONT = Font(name="Calibri", italic=True, size=11, color="555555")
+PAYABLE_FONT = Font(name="Calibri", bold=True, size=13)
+PAYABLE_FILL = PatternFill(start_color="FEF3C7", end_color="FEF3C7", fill_type="solid")
 BORDER = Border(
     bottom=Side(style="thin", color="E5E7EB"),
 )
@@ -122,11 +125,11 @@ def generate_quote_excel(quote_data: dict, dealer_profile: dict) -> bytes:
             for col in range(1, 11):
                 ws.cell(row=row_idx, column=col).fill = ALT_ROW_FILL
 
-    # Grand Total row
+    # Grand Total row (subtotal before tax)
     total_row = 8 + len(line_items)
     ws.cell(row=total_row, column=1, value="").font = TOTAL_FONT
     ws.merge_cells(start_row=total_row, start_column=1, end_row=total_row, end_column=6)
-    ws.cell(row=total_row, column=1, value="GRAND TOTAL").font = TOTAL_FONT
+    ws.cell(row=total_row, column=1, value="SUBTOTAL").font = TOTAL_FONT
 
     best_company = None
     for company in companies:
@@ -141,6 +144,44 @@ def generate_quote_excel(quote_data: dict, dealer_profile: dict) -> bytes:
                       value=float(total_val) if total_val else 0)
         cell.number_format = INDIAN_CURRENCY_FMT
         cell.font = TOTAL_FONT
+
+    # CGST row
+    cgst_row = total_row + 1
+    first_ct = next(iter(company_totals.values()), {})
+    cgst_rate = first_ct.get("cgst_rate", 0)
+    sgst_rate = first_ct.get("sgst_rate", 0)
+
+    ws.merge_cells(start_row=cgst_row, start_column=1, end_row=cgst_row, end_column=6)
+    ws.cell(row=cgst_row, column=1, value=f"CGST @ {cgst_rate}%").font = GST_FONT
+    for comp_idx, company in enumerate(companies, 7):
+        ct = company_totals.get(company, {})
+        cgst_amt = ct.get("cgst_amount", 0)
+        cell = ws.cell(row=cgst_row, column=comp_idx, value=float(cgst_amt) if cgst_amt else 0)
+        cell.number_format = INDIAN_CURRENCY_FMT
+        cell.font = GST_FONT
+
+    # SGST row
+    sgst_row = cgst_row + 1
+    ws.merge_cells(start_row=sgst_row, start_column=1, end_row=sgst_row, end_column=6)
+    ws.cell(row=sgst_row, column=1, value=f"SGST @ {sgst_rate}%").font = GST_FONT
+    for comp_idx, company in enumerate(companies, 7):
+        ct = company_totals.get(company, {})
+        sgst_amt = ct.get("sgst_amount", 0)
+        cell = ws.cell(row=sgst_row, column=comp_idx, value=float(sgst_amt) if sgst_amt else 0)
+        cell.number_format = INDIAN_CURRENCY_FMT
+        cell.font = GST_FONT
+
+    # Total Payable row
+    payable_row = sgst_row + 1
+    ws.merge_cells(start_row=payable_row, start_column=1, end_row=payable_row, end_column=6)
+    ws.cell(row=payable_row, column=1, value="TOTAL PAYABLE (incl. GST)").font = PAYABLE_FONT
+    for comp_idx, company in enumerate(companies, 7):
+        ct = company_totals.get(company, {})
+        total_gst = ct.get("total_with_gst", 0)
+        cell = ws.cell(row=payable_row, column=comp_idx, value=float(total_gst) if total_gst else 0)
+        cell.number_format = INDIAN_CURRENCY_FMT
+        cell.font = PAYABLE_FONT
+        cell.fill = PAYABLE_FILL
         if company == best_company:
             cell.fill = BEST_PRICE_FILL
 
@@ -156,7 +197,7 @@ def generate_quote_excel(quote_data: dict, dealer_profile: dict) -> bytes:
 
         # Headers
         headers = ["Sr.", "Item Code", "Description", "Category", "Material",
-                   "MRP", "Qty", "Discount %", "Unit Price", "Line Total"]
+                   "MRP", "Qty", "Unit Price", "Line Total"]
         for col_idx, header in enumerate(headers, 1):
             cell = ws.cell(row=7, column=col_idx, value=header)
             cell.fill = PatternFill(
@@ -181,32 +222,60 @@ def generate_quote_excel(quote_data: dict, dealer_profile: dict) -> bytes:
 
             ws.cell(row=row_idx, column=7, value=float(item["quantity"]) if item.get("quantity") else 0)
 
-            discount = item.get(f"discount_{c_lower}")
-            ws.cell(row=row_idx, column=8, value=float(discount) if discount else 0).number_format = "0.00%"
-
             unit_price = item.get(f"unit_price_{c_lower}")
-            cell = ws.cell(row=row_idx, column=9, value=float(unit_price) if unit_price else 0)
+            cell = ws.cell(row=row_idx, column=8, value=float(unit_price) if unit_price else 0)
             cell.number_format = INDIAN_CURRENCY_FMT
 
             line_total = item.get(f"line_total_{c_lower}")
-            cell = ws.cell(row=row_idx, column=10, value=float(line_total) if line_total else 0)
+            cell = ws.cell(row=row_idx, column=9, value=float(line_total) if line_total else 0)
             cell.number_format = INDIAN_CURRENCY_FMT
 
             # Alternating rows
             if row_idx % 2 == 0:
-                for col in range(1, 11):
+                for col in range(1, 10):
                     ws.cell(row=row_idx, column=col).fill = ALT_ROW_FILL
 
-        # Grand Total
+        # Grand Total (subtotal)
         total_row = 8 + len(line_items)
-        ws.merge_cells(start_row=total_row, start_column=1, end_row=total_row, end_column=9)
-        ws.cell(row=total_row, column=1, value="GRAND TOTAL").font = TOTAL_FONT
+        ws.merge_cells(start_row=total_row, start_column=1, end_row=total_row, end_column=8)
+        ws.cell(row=total_row, column=1, value="SUBTOTAL").font = TOTAL_FONT
 
         ct = company_totals.get(company, {})
         total_val = ct.get("total", 0)
-        cell = ws.cell(row=total_row, column=10, value=float(total_val) if total_val else 0)
+        cell = ws.cell(row=total_row, column=9, value=float(total_val) if total_val else 0)
         cell.number_format = INDIAN_CURRENCY_FMT
         cell.font = TOTAL_FONT
+
+        # CGST row
+        cgst_row = total_row + 1
+        cgst_rate_val = ct.get("cgst_rate", 0)
+        sgst_rate_val = ct.get("sgst_rate", 0)
+
+        ws.merge_cells(start_row=cgst_row, start_column=1, end_row=cgst_row, end_column=8)
+        ws.cell(row=cgst_row, column=1, value=f"CGST @ {cgst_rate_val}%").font = GST_FONT
+        cgst_amt = ct.get("cgst_amount", 0)
+        cell = ws.cell(row=cgst_row, column=9, value=float(cgst_amt) if cgst_amt else 0)
+        cell.number_format = INDIAN_CURRENCY_FMT
+        cell.font = GST_FONT
+
+        # SGST row
+        sgst_row = cgst_row + 1
+        ws.merge_cells(start_row=sgst_row, start_column=1, end_row=sgst_row, end_column=8)
+        ws.cell(row=sgst_row, column=1, value=f"SGST @ {sgst_rate_val}%").font = GST_FONT
+        sgst_amt = ct.get("sgst_amount", 0)
+        cell = ws.cell(row=sgst_row, column=9, value=float(sgst_amt) if sgst_amt else 0)
+        cell.number_format = INDIAN_CURRENCY_FMT
+        cell.font = GST_FONT
+
+        # Total Payable row
+        payable_row = sgst_row + 1
+        ws.merge_cells(start_row=payable_row, start_column=1, end_row=payable_row, end_column=8)
+        ws.cell(row=payable_row, column=1, value="TOTAL PAYABLE (incl. GST)").font = PAYABLE_FONT
+        total_gst = ct.get("total_with_gst", 0)
+        cell = ws.cell(row=payable_row, column=9, value=float(total_gst) if total_gst else 0)
+        cell.number_format = INDIAN_CURRENCY_FMT
+        cell.font = PAYABLE_FONT
+        cell.fill = PAYABLE_FILL
         if ct.get("is_best_price"):
             cell.fill = BEST_PRICE_FILL
 

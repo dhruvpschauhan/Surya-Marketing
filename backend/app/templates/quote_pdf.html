@@ -114,6 +114,20 @@
     background: #f3f4f6 !important;
   }
 
+  .gst-row td {
+    font-size: 10px;
+    font-style: italic;
+    color: #555;
+    background: #fafafa !important;
+  }
+
+  .payable-row td {
+    border-top: 2px solid #F5A623;
+    font-weight: 800;
+    font-size: 12px;
+    background: #FEF3C7 !important;
+  }
+
   .badge {
     display: inline-block;
     padding: 1px 6px;
@@ -179,12 +193,17 @@
     {% for ct in quote.company_totals %}
     <tr{% if ct.is_best_price %} class="best-price"{% endif %}>
       <td><strong>{{ ct.company }}</strong></td>
-      <td class="text-right font-mono">{{ format_currency(ct.total) }}</td>
+      <td class="text-right font-mono">{{ format_currency(ct.total_with_gst) }}</td>
       <td class="text-center">
         {% if ct.is_best_price %}🏆 Best Price{% endif %}
       </td>
     </tr>
     {% endfor %}
+    <tr class="gst-row">
+      <td colspan="3" style="text-align:center; font-size:9px; color:#777;">
+        All totals are GST inclusive (CGST @ {{ quote.company_totals[0].cgst_rate }}% + SGST @ {{ quote.company_totals[0].sgst_rate }}%)
+      </td>
+    </tr>
   </tbody>
 </table>
 
@@ -226,10 +245,30 @@
     {% endif %}
     {% endfor %}
     <tr class="total-row">
-      <td colspan="6"><strong>GRAND TOTAL</strong></td>
+      <td colspan="6"><strong>SUBTOTAL</strong></td>
+      {% for ct in quote.company_totals %}
+      <td class="text-right font-mono">
+        {{ format_currency(ct.total) }}
+      </td>
+      {% endfor %}
+    </tr>
+    <tr class="gst-row">
+      <td colspan="6">CGST @ {{ quote.company_totals[0].cgst_rate }}%</td>
+      {% for ct in quote.company_totals %}
+      <td class="text-right font-mono">{{ format_currency(ct.cgst_amount) }}</td>
+      {% endfor %}
+    </tr>
+    <tr class="gst-row">
+      <td colspan="6">SGST @ {{ quote.company_totals[0].sgst_rate }}%</td>
+      {% for ct in quote.company_totals %}
+      <td class="text-right font-mono">{{ format_currency(ct.sgst_amount) }}</td>
+      {% endfor %}
+    </tr>
+    <tr class="payable-row">
+      <td colspan="6"><strong>TOTAL PAYABLE (incl. GST)</strong></td>
       {% for ct in quote.company_totals %}
       <td class="text-right font-mono{% if ct.is_best_price %} best-price{% endif %}">
-        {{ format_currency(ct.total) }}
+        {{ format_currency(ct.total_with_gst) }}
       </td>
       {% endfor %}
     </tr>
@@ -285,13 +324,29 @@
     </tr>
     {% endfor %}
     <tr class="total-row">
-      <td colspan="9"><strong>GRAND TOTAL — {{ company }}</strong></td>
+      <td colspan="9"><strong>SUBTOTAL — {{ company }}</strong></td>
       <td class="text-right font-mono">
         {% for ct in quote.company_totals %}
           {% if ct.company == company %}{{ format_currency(ct.total) }}{% endif %}
         {% endfor %}
       </td>
     </tr>
+    {% for ct in quote.company_totals %}
+    {% if ct.company == company %}
+    <tr class="gst-row">
+      <td colspan="9">CGST @ {{ ct.cgst_rate }}%</td>
+      <td class="text-right font-mono">{{ format_currency(ct.cgst_amount) }}</td>
+    </tr>
+    <tr class="gst-row">
+      <td colspan="9">SGST @ {{ ct.sgst_rate }}%</td>
+      <td class="text-right font-mono">{{ format_currency(ct.sgst_amount) }}</td>
+    </tr>
+    <tr class="payable-row">
+      <td colspan="9"><strong>TOTAL PAYABLE (incl. GST)</strong></td>
+      <td class="text-right font-mono">{{ format_currency(ct.total_with_gst) }}</td>
+    </tr>
+    {% endif %}
+    {% endfor %}
   </tbody>
 </table>
 

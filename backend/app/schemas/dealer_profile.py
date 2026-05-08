@@ -8,6 +8,8 @@ class DealerProfileBase(BaseModel):
     mobile_number: str = ""
     address: str = ""
     logo_url: str = ""
+    cgst_rate: float = 9.0
+    sgst_rate: float = 9.0
 
 
 class DealerProfileResponse(DealerProfileBase):
@@ -23,3 +25,5 @@ class DealerProfileUpdate(BaseModel):
     mobile_number: Optional[str] = None
     address: Optional[str] = None
     logo_url: Optional[str] = None
+    cgst_rate: Optional[float] = None
+    sgst_rate: Optional[float] = None

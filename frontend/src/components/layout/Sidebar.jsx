@@ -16,9 +16,7 @@ export default function Sidebar() {
       {/* Logo */}
       <div className="p-5 border-b border-[var(--color-border)]">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-[var(--color-accent)] flex items-center justify-center">
-            <span className="text-black font-bold text-sm">QF</span>
-          </div>
+          <img src="/logo_qf.ico" alt="QuoteForge Logo" className="w-8 h-8 rounded-lg object-contain" />
           <div>
             <h1 className="text-sm font-bold text-[var(--color-text-primary)] tracking-tight">QuoteForge</h1>
             <p className="text-[10px] text-[var(--color-text-muted)]">Multi-Brand Quotes</p>

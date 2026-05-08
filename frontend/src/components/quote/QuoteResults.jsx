@@ -1,14 +1,13 @@
 import { useState } from 'react';
 import { formatIndianCurrency, getCategoryBadgeClass, getMaterialBadgeClass, COMPANIES } from '../../utils/helpers';
-import { exportQuotePDF, exportQuoteExcel } from '../../api/client';
+import { exportQuoteExcel } from '../../api/client';
 
 export default function QuoteResults({ data, onNewQuote }) {
-  const [showDiscounts, setShowDiscounts] = useState(false);
   const [exporting, setExporting] = useState(null);
 
   if (!data) return null;
 
-  const { quote_id, line_items = [], company_totals = [], discounts_used = [] } = data;
+  const { quote_id, line_items = [], company_totals = [] } = data;
 
   // Find lowest line total per row
   const getRowLowest = (item) => {
@@ -19,23 +18,67 @@ export default function QuoteResults({ data, onNewQuote }) {
     return Math.min(...vals);
   };
 
-  const handleExport = async (type) => {
-    setExporting(type);
+  const handleExcelExport = async () => {
+    setExporting('excel');
     try {
-      const res = type === 'pdf'
-        ? await exportQuotePDF(quote_id)
-        : await exportQuoteExcel(quote_id);
-
+      const res = await exportQuoteExcel(quote_id);
       const url = window.URL.createObjectURL(new Blob([res.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.download = `QuoteForge_${quote_id.slice(0, 8)}.${type === 'pdf' ? 'pdf' : 'xlsx'}`;
+      link.download = `QuoteForge_${quote_id.slice(0, 8)}.xlsx`;
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch (err) {
       alert(`Export failed: ${err.response?.data?.detail || err.message}`);
+    } finally {
+      setExporting(null);
+    }
+  };
+
+  const handlePdfExport = async () => {
+    if (!quote_id) return;
+    setExporting('pdf');
+
+    try {
+      const companies = ['Apollo', 'Supreme', 'Astral', 'Ashirvad'];
+
+      // Fire all 5 requests simultaneously
+      const requests = [
+        fetch('/api/pdf/comparison', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ quote_id }),
+        }),
+        ...companies.map(company =>
+          fetch(`/api/pdf/brand/${company}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ quote_id }),
+          })
+        ),
+      ];
+
+      const responses = await Promise.all(requests);
+      const filenames = ['Comparison', ...companies];
+
+      // Download all 5 files
+      for (let i = 0; i < responses.length; i++) {
+        if (!responses[i].ok) throw new Error(`Failed: ${filenames[i]}.pdf`);
+        const blob = await responses[i].blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${filenames[i]}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      console.error('PDF download failed:', err);
+      alert(`PDF export failed: ${err.message}`);
     } finally {
       setExporting(null);
     }
@@ -55,10 +98,10 @@ export default function QuoteResults({ data, onNewQuote }) {
             </span>
           </h3>
           <div className="flex gap-2">
-            <button onClick={() => handleExport('excel')} className="btn-secondary text-xs" disabled={!!exporting}>
+            <button onClick={handleExcelExport} className="btn-secondary text-xs" disabled={!!exporting}>
               {exporting === 'excel' ? '⏳' : '📊'} Excel
             </button>
-            <button onClick={() => handleExport('pdf')} className="btn-secondary text-xs" disabled={!!exporting}>
+            <button onClick={handlePdfExport} className="btn-secondary text-xs" disabled={!!exporting}>
               {exporting === 'pdf' ? '⏳' : '📄'} PDF
             </button>
             <button onClick={onNewQuote} className="btn-primary text-xs">
@@ -87,9 +130,22 @@ export default function QuoteResults({ data, onNewQuote }) {
             <tbody>
               {validItems.map((item, idx) => {
                 const lowest = getRowLowest(item);
+                const hasOverride = item.has_override;
                 return (
-                  <tr key={idx} className="stagger-reveal" style={{ animationDelay: `${idx * 60}ms` }}>
-                    <td className="text-center text-[var(--color-text-muted)]">{item.sr}</td>
+                  <tr
+                    key={idx}
+                    className="stagger-reveal"
+                    style={{
+                      animationDelay: `${idx * 60}ms`,
+                      borderLeft: hasOverride ? '3px solid #F5A623' : undefined,
+                    }}
+                  >
+                    <td className="text-center text-[var(--color-text-muted)]">
+                      <span className="flex items-center justify-center gap-1">
+                        {hasOverride && <span className="text-[#F5A623] text-[8px]" title="Custom discounts were used for this item">●</span>}
+                        {item.sr}
+                      </span>
+                    </td>
                     <td className="mono text-[var(--color-accent)]">{item.product_code}</td>
                     <td className="text-xs text-[var(--color-text-secondary)] max-w-[180px] truncate">{item.description}</td>
                     <td className="text-center">
@@ -116,61 +172,29 @@ export default function QuoteResults({ data, onNewQuote }) {
         </div>
 
         {/* ─── Company Totals ─── */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-2 mt-4">
           {company_totals.map((ct) => (
             <div
               key={ct.company}
-              className={`card p-4 text-center relative ${ct.is_best_price ? 'animate-pulse-glow border-[var(--color-success)]' : ''}`}
+              className={`card p-4 text-center flex flex-col justify-center items-center gap-1 ${ct.is_best_price ? 'animate-pulse-glow border-[var(--color-success)]' : ''}`}
             >
               {ct.is_best_price && (
-                <span className="best-price-badge absolute -top-2 left-1/2 -translate-x-1/2">
+                <span className="best-price-badge whitespace-nowrap shadow-md mb-1">
                   🏆 Best Price
                 </span>
               )}
-              <p className="text-xs text-[var(--color-text-muted)] mb-1 mt-1">{ct.company}</p>
+              <p className={`text-xs ${ct.is_best_price ? 'text-[var(--color-success)] font-semibold' : 'text-[var(--color-text-muted)]'}`}>
+                {ct.company}
+              </p>
               <p className={`text-lg font-bold font-mono ${ct.is_best_price ? 'text-[var(--color-success)]' : 'text-[var(--color-text-primary)]'}`}>
-                {formatIndianCurrency(ct.total)}
+                {formatIndianCurrency(ct.total_with_gst)}
               </p>
             </div>
           ))}
         </div>
-
-        {/* ─── Collapsible Discounts ─── */}
-        <button
-          onClick={() => setShowDiscounts(!showDiscounts)}
-          className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-accent)] transition-colors mb-3"
-        >
-          {showDiscounts ? '▾' : '▸'} Discount rates applied ({discounts_used.length} rates)
-        </button>
-
-        {showDiscounts && (
-          <div className="animate-fade-in overflow-x-auto rounded-lg border border-[var(--color-border)]">
-            <table className="data-table">
-              <thead>
-                <tr className="bg-[rgba(255,255,255,0.03)]">
-                  <th>Company</th>
-                  <th>Category</th>
-                  <th>Material</th>
-                  <th className="text-right">Discount %</th>
-                </tr>
-              </thead>
-              <tbody>
-                {discounts_used.map((d, idx) => (
-                  <tr key={idx}>
-                    <td className="font-medium">{d.company}</td>
-                    <td>
-                      <span className={`badge ${getCategoryBadgeClass(d.category)}`}>{d.category}</span>
-                    </td>
-                    <td>
-                      <span className={`badge ${getMaterialBadgeClass(d.material_type)}`}>{d.material_type}</span>
-                    </td>
-                    <td className="text-right mono font-medium text-[var(--color-accent)]">{d.discount_percent}%</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <p className="text-[10px] text-[var(--color-text-muted)] text-center mb-6 italic">
+          * Rates are GST inclusive
+        </p>
 
         {/* Error items */}
         {line_items.filter(li => li.error).length > 0 && (

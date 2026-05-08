@@ -10,6 +10,7 @@
   --color-border: #2A2A2A;
   --color-border-focus: #F5A623;
   --color-accent: #F5A623;
+  --color-accent-hover: #E09612;
   --color-accent-dim: #F5A62320;
   --color-text-primary: #F0F0F0;
   --color-text-secondary: #888888;
@@ -404,4 +405,15 @@ body {
 /* Font mono for table cells */
 .font-mono {
   font-family: var(--font-mono);
+}
+
+/* Shake animation for invalid input */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 50%, 90% { transform: translateX(-3px); }
+  30%, 70% { transform: translateX(3px); }
+}
+
+.animate-shake {
+  animation: shake 0.4s ease-in-out;
 }

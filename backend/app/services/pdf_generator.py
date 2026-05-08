@@ -95,7 +95,6 @@ def generate_quote_pdf(quote_data: dict, dealer_profile: dict) -> bytes:
                 "material_type": item["material_type"],
                 "mrp": item.get(f"mrp_{c_lower}"),
                 "quantity": item["quantity"],
-                "discount": item.get(f"discount_{c_lower}"),
                 "unit_price": item.get(f"unit_price_{c_lower}"),
                 "line_total": item.get(f"line_total_{c_lower}"),
             })

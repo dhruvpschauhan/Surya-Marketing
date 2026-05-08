@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text
+from sqlalchemy import Column, Integer, String, Text, Float
 from app.core.database import Base
 
 
@@ -11,3 +11,5 @@ class DealerProfile(Base):
     mobile_number = Column(String, nullable=True, default="")
     address = Column(Text, nullable=True, default="")
     logo_url = Column(String, nullable=True, default="")
+    cgst_rate = Column(Float, nullable=False, default=9.0)
+    sgst_rate = Column(Float, nullable=False, default=9.0)
