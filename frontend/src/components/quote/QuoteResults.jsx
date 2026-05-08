@@ -44,15 +44,17 @@ export default function QuoteResults({ data, onNewQuote }) {
     try {
       const companies = ['Apollo', 'Supreme', 'Astral', 'Ashirvad'];
 
+      const baseUrl = import.meta.env.VITE_API_URL || '';
+
       // Fire all 5 requests simultaneously
       const requests = [
-        fetch('/api/pdf/comparison', {
+        fetch(`${baseUrl}/api/pdf/comparison`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ quote_id }),
         }),
         ...companies.map(company =>
-          fetch(`/api/pdf/brand/${company}`, {
+          fetch(`${baseUrl}/api/pdf/brand/${company}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ quote_id }),
